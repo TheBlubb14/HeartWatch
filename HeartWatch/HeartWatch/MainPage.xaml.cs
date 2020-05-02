@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Tizen;
@@ -41,7 +42,7 @@ namespace HeartWatch
         private void Heart_HeartRateMonitorDataChanged(object sender, EventArgs e)
         {
             var h = heart.GetHeartRate();
-            hlabel.Text = $"HB: {h}";
+            hlabel.Text = $"{h}";
             Send(h);
         }
 
@@ -81,16 +82,33 @@ namespace HeartWatch
 
         private void Start()
         {
-            //Tizen.System.Power.RequestLock(Tizen.System.PowerLock.Cpu, (int)TimeSpan.FromDays(1).TotalMilliseconds);
+            // crashes
+            //Tizen.System.Power.RequestLock(Tizen.System.PowerLock.DisplayDim, 0);
+            //Tizen.System.Power.RequestLock(Tizen.System.PowerLock.DisplayDim, (int)TimeSpan.FromHours(4).TotalMilliseconds);
+
+            int ret = DevicePowerRequestLock(1, 0); // type : CPU:0, DisplayNormal:1, DisplayDim:2
+            Log.Debug(App.LOG_TAG, $"PowerLock: {ret}");
+
             heart.StartHeartRateMonitor();
             actionButton.Text = "STOP";
         }
 
         private void Stop()
         {
-            //Tizen.System.Power.ReleaseLock(Tizen.System.PowerLock.Cpu);
+            // crashes
+            //Tizen.System.Power.ReleaseLock(Tizen.System.PowerLock.DisplayDim);
+
+            int ret = DevicePowerReleaseLock(1);    // type : CPU:0, DisplayNormal:1, DisplayDim:2
+            Log.Debug(App.LOG_TAG, $"PowerReleaseLock: {ret}");
+
             heart.StopHeartRateMonitor();
             actionButton.Text = "START";
         }
+
+        [DllImport("libcapi-system-device.so.0", EntryPoint = "device_power_request_lock", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int DevicePowerRequestLock(int type, int timeout_ms);
+
+        [DllImport("libcapi-system-device.so.0", EntryPoint = "device_power_release_lock", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int DevicePowerReleaseLock(int type);
     }
 }
